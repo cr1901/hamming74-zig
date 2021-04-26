@@ -12,7 +12,14 @@ pub fn build(b: *Builder) void {
     lib.install();
 
     const test_step = b.step("test", "Run all tests");
-    test_step.dependOn(&b.addTest("src/main.zig").step);
+    const tst = b.addTest("src/main.zig");
+    tst.setBuildMode(mode);
+    tst.addPackage(.{
+            .name = "zig-matrix",
+            .path = "zig-matrix/src/main.zig",
+    });
+
+    test_step.dependOn(&tst.step);
 
     b.default_step.dependOn(test_step);
 }
