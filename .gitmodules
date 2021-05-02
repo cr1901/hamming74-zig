@@ -1,3 +1,0 @@
-[submodule "zig-matrix"]
-	path = zig-matrix
-	url = https://github.com/cr1901/zig-matrix.git

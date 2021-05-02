@@ -1,25 +1,17 @@
-const Builder = @import("std").build.Builder;
+const std = @import("std");
 
-pub fn build(b: *Builder) void {
+pub fn build(b: *std.build.Builder) void {
+    // Standard release options allow the person running `zig build` to select
+    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
+
     const lib = b.addStaticLibrary("hamming74", "src/main.zig");
     lib.setBuildMode(mode);
-    lib.addPackage(.{
-            .name = "zig-matrix",
-            .path = "zig-matrix/src/main.zig",
-    });
-
     lib.install();
 
-    const test_step = b.step("test", "Run all tests");
-    const tst = b.addTest("src/main.zig");
-    tst.setBuildMode(mode);
-    tst.addPackage(.{
-            .name = "zig-matrix",
-            .path = "zig-matrix/src/main.zig",
-    });
+    var main_tests = b.addTest("src/main.zig");
+    main_tests.setBuildMode(mode);
 
-    test_step.dependOn(&tst.step);
-
-    b.default_step.dependOn(test_step);
+    const test_step = b.step("test", "Run library tests");
+    test_step.dependOn(&main_tests.step);
 }
