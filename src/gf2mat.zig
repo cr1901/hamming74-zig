@@ -1,10 +1,14 @@
 /// Helper module for multiplying vectors/matrices of GF(2).
 /// A lot of this was taken from the zig-matrix library and reduced/modified for my own needs.
 
+const std = @import("std");
+const testing = std.testing;
+
+
 /// Row major-only
 /// Most Significant Bit to Least Significant Bit order per byte, going in order of rows.
 /// Least Significant Byte of data store used first.
-fn Gf2Mat(
+pub fn Gf2Mat(
     comptime r: comptime_int,
     comptime c: comptime_int,
 ) type {
@@ -19,17 +23,32 @@ fn Gf2Mat(
         const cols: comptime_int = c;
         const Self = @This();
 
-        fn init() Self {
+        pub fn init() Self {
             return Self {
                 .data = [_]u8{0} ** num_bytes,
             };
         }
 
-        fn fromBitArray(data: [bit_size]u1) Self {
-            @panic("unimplemented");
+        pub fn fromBitArray(data: [bit_size]u1) Self {
+            var out = Self.init();
+            var curr_byte: usize = 0;
+            var curr_offs: u3 = 7;
+
+            for (data) |d| {
+                var mask = (@as(u8, d) << curr_offs);
+                out.data[curr_byte] |= mask;
+
+                if(curr_offs == 0) {
+                    curr_byte += 1;
+                }
+
+                curr_offs -%= 1;
+            }
+
+            return out;
         }
 
-        fn multiply(self: Self, b: anytype) Gf2Mat(Self.rows, @TypeOf(b).cols) {
+        pub fn multiply(self: Self, b: anytype) Gf2Mat(Self.rows, @TypeOf(b).cols) {
             if(Self.cols != @TypeOf(b).rows) {
                 @compileError("Self.cols does not match b.rows");
             }
@@ -38,33 +57,6 @@ fn Gf2Mat(
         }
     };
 }
-
-
-// const Matrix = @import("zig-matrix").Matrix;
-// const StorageOrder = @import("zig-matrix").StorageOrder;
-//
-// const Generator = Matrix(u1, 7, 4).fromValues([_]u1 {
-//     1, 1, 0, 1,
-//     1, 0, 1, 1,
-//     1, 0, 0, 0,
-//     0, 1, 1, 1,
-//     0, 1, 0, 0,
-//     0, 0, 1, 0,
-//     0, 0, 0, 1
-// }, .RowMajor);
-//
-// const ParityCheck = Matrix(u1, 3, 7).fromValues([_]u1 {
-//     1, 0, 1, 0, 1, 0, 1,
-//     0, 1, 1, 0, 0, 1, 1,
-//     0, 0, 0, 1, 1, 1, 1
-// }, .RowMajor);
-//
-// const Decode = Matrix(u1, 4, 7).fromValues([_]u1 {
-//     0, 0, 1, 0, 0, 0, 0,
-//     0, 0, 0, 0, 1, 0, 0,
-//     0, 0, 0, 0, 0, 1, 0,
-//     0, 0, 0, 0, 0, 0, 1
-// }, .RowMajor);
 
 test "mul" {
     const foo = Gf2Mat(3, 2).init();
