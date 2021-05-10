@@ -66,10 +66,48 @@ pub fn Gf2Mat(
                 @compileError("Self.cols does not match b.rows");
             }
 
-            const mult_bit_size: comptime_int = c * r;
+            const mult_bit_size: comptime_int = Self.rows * @TypeOf(b).cols;
             var mul_data: [mult_bit_size]u1 = [_]u1{0} ** mult_bit_size;
 
-            @panic("unimplemented");
+            var e: usize = 0;
+            var b_col_idx: usize = 0;
+            var self_row_idx: usize = 0;
+
+            while (e < mul_data.len) : (e += 1) {
+                // Matrix multiplication/dot product is equivalent to AND-ing bits together,
+                // and taking least-significant bit of the popcnt of the ANDed result.
+                var num_ones_lsb: u1 = 0;
+                // var num_ones: u8 = 0;
+                var shared_idx: usize = 0;
+
+                while (shared_idx < Self.cols) : (shared_idx += 1)  {
+                    const stdout = std.io.getStdOut().writer();
+
+                    if ((self.elementAt(self_row_idx, shared_idx) & b.elementAt(shared_idx, b_col_idx)) == 1) {
+                        num_ones_lsb +%= 1;
+                        // num_ones += 1;
+                    }
+
+                    // stdout.print("({}, {}): {}, ({}, {}): {}, {}\n",
+                    //     .{
+                    //       self_row_idx, shared_idx,
+                    //       self.elementAt(self_row_idx, shared_idx),
+                    //       shared_idx, b_col_idx,
+                    //       self.elementAt(shared_idx, b_col_idx),
+                    //       num_ones
+                    //  }) catch unreachable;
+                }
+
+                mul_data[e] = num_ones_lsb;
+
+                b_col_idx += 1;
+                if(b_col_idx == @TypeOf(b).cols) {
+                    b_col_idx = 0;
+                    self_row_idx += 1;
+                }
+            }
+
+            return Gf2Mat(Self.rows, @TypeOf(b).cols).fromBitArray(mul_data);
         }
     };
 }
@@ -108,8 +146,26 @@ test "elementAt" {
 }
 
 test "mul" {
-    const foo = Gf2Mat(3, 2).init();
-    const bar = Gf2Mat(2, 1).init();
+    const foo = Gf2Mat(4, 2).fromBitArray([_]u1 {
+        1, 1,
+        1, 0,
+        0, 1,
+        0, 0
+    });
 
-    // const mul_res = foo.multiply(bar);
+    const bar = Gf2Mat(2, 4).fromBitArray([_]u1 {
+        1, 1, 0, 1,
+        1, 0, 1, 1
+    });
+
+    const expect_mul = Gf2Mat(4, 4).fromBitArray([_]u1 {
+        0, 1, 1, 0,
+        1, 1, 0, 1,
+        1, 0, 1, 1,
+        0, 0, 0, 0,
+    });
+
+    const actual_mul = foo.multiply(bar);
+
+    testing.expectEqual(expect_mul.data, actual_mul.data);
 }
